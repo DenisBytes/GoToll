@@ -19,25 +19,25 @@ var (
 	sendInterval = time.Second
 )
 
-func genOBUIDs (n int) []int {
+func genOBUIDs(n int) []int {
 	ids := make([]int, n)
 	for i := 0; i < n; i++ {
-		ids[i] = rand.Intn(math.MaxInt) 
+		ids[i] = rand.Intn(math.MaxInt)
 	}
 	return ids
 }
 
-func genCoord () float64 {
-	n :=float64(rand.Intn(100)+1)
+func genCoord() float64 {
+	n := float64(rand.Intn(100) + 1)
 	f := rand.Float64()
 	return n + f
 }
 
-func genLatLong() (float64, float64){
+func genLatLong() (float64, float64) {
 	return genCoord(), genCoord()
 }
 
-func main(){
+func main() {
 	obuIDs := genOBUIDs(20)
 	conn, _, err := websocket.DefaultDialer.Dial(wsEndpoint, nil)
 	if err != nil {
@@ -48,19 +48,17 @@ func main(){
 			lat, long := genLatLong()
 			data := types.OBUData{
 				OBUID: obuIDs[i],
-				Lat: lat,
-				Long: long,
+				Lat:   lat,
+				Long:  long,
 			}
 			if err := conn.WriteJSON(data); err != nil {
 				log.Fatal(err)
 			}
 		}
-		
 		time.Sleep(sendInterval)
 	}
 }
 
-
-func init(){
+func init() {
 	rand.New(rand.NewSource(time.Now().UnixNano()))
 }
