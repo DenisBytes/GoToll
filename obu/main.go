@@ -16,7 +16,7 @@ const (
 )
 
 var (
-	sendInterval = time.Second
+	sendInterval = time.Second * 5
 )
 
 func genOBUIDs(n int) []int {
@@ -55,7 +55,7 @@ func main() {
 				log.Fatal(err)
 			}
 		}
-		time.Sleep(sendInterval)
+		time.Sleep(sendInterval )
 	}
 }
 
