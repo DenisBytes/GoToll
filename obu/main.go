@@ -1,4 +1,5 @@
 // obu = on-board unit
+
 package main
 
 import (
@@ -55,7 +56,7 @@ func main() {
 				log.Fatal(err)
 			}
 		}
-		time.Sleep(sendInterval )
+		time.Sleep(sendInterval)
 	}
 }
 

@@ -9,17 +9,17 @@ import (
 	"github.com/DenisBytes/GoToll/types"
 )
 
-type Client struct {
+type HTTPClient struct {
 	Endpoint string
 }
 
-func NewClient(endpoint string) *Client {
-	return &Client{
+func NewHTTPClient(endpoint string) *HTTPClient {
+	return &HTTPClient{
 		Endpoint: endpoint,
 	}
 }
 
-func (c *Client) AggregateInvoice(data types.Distance) error {
+func (c *HTTPClient) AggregateInvoice(data types.Distance) error {
 	b, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -32,7 +32,7 @@ func (c *Client) AggregateInvoice(data types.Distance) error {
 	if err != nil {
 		return err
 	}
-	if resp.StatusCode != http.StatusOK{
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("The service responded with a non 200 status code: %d\n", resp.StatusCode)
 	}
 	return nil
