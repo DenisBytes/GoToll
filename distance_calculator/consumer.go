@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"time"
 
@@ -11,38 +12,38 @@ import (
 )
 
 type KafkaConsumer struct {
-	consumer *kafka.Consumer
-	isRunning bool
-	calcService CalculatorServicer 
-	aggClient *client.HTTPClient
+	consumer    *kafka.Consumer
+	isRunning   bool
+	calcService CalculatorServicer
+	aggClient   client.Client
 }
 
-func NewKafkaConsumer(topic string, svc CalculatorServicer, aggClient *client.HTTPClient) (*KafkaConsumer, error) {
+func NewKafkaConsumer(topic string, svc CalculatorServicer, aggClient client.Client) (*KafkaConsumer, error) {
 	c, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers": "localhost",
 		"group.id":          "myGroup",
 		"auto.offset.reset": "earliest",
 	})
-	if err!= nil {
-		return nil,err
+	if err != nil {
+		return nil, err
 	}
 
 	c.SubscribeTopics([]string{topic}, nil)
 
 	return &KafkaConsumer{
-		consumer: c,
+		consumer:    c,
 		calcService: svc,
-		aggClient: aggClient,
+		aggClient:   aggClient,
 	}, nil
 }
 
-func(c *KafkaConsumer) Start(){
+func (c *KafkaConsumer) Start() {
 	logrus.Info("kafka transport started")
 	c.isRunning = true
 	c.readMessageLoop()
 }
 
-func(c *KafkaConsumer) readMessageLoop() {
+func (c *KafkaConsumer) readMessageLoop() {
 
 	for c.isRunning {
 		msg, err := c.consumer.ReadMessage(-1)
@@ -55,17 +56,17 @@ func(c *KafkaConsumer) readMessageLoop() {
 			logrus.Errorf("serialization (json) error %s \n", err)
 			continue
 		}
-		distance, err := c.calcService.CalculateDistance(data);
+		distance, err := c.calcService.CalculateDistance(data)
 		if err != nil {
 			logrus.Errorf("calculation service error %s \n", err)
 			continue
 		}
-		req := types.Distance{
+		req := &types.AggregateRequest{
 			Value: distance,
-			Unix: time.Now().Unix(),
-			OBUID: data.OBUID,
+			Unix:  time.Now().Unix(),
+			ObuID: int32 (data.OBUID),
 		}
-		if err := c.aggClient.AggregateInvoice(req); err != nil {
+		if err := c.aggClient.Aggregate(context.Background(), req); err != nil {
 			logrus.Error("Aggregate error:", err)
 			continue
 		}

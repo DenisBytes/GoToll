@@ -2,11 +2,13 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/DenisBytes/GoToll/types"
+	"github.com/sirupsen/logrus"
 )
 
 type HTTPClient struct {
@@ -19,12 +21,14 @@ func NewHTTPClient(endpoint string) *HTTPClient {
 	}
 }
 
-func (c *HTTPClient) AggregateInvoice(data types.Distance) error {
-	b, err := json.Marshal(data)
+func (c *HTTPClient) Aggregate(ctx context.Context, aggRequest *types.AggregateRequest) error {
+	b, err := json.Marshal(aggRequest)
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("POST", c.Endpoint, bytes.NewReader(b))
+	endpoint := fmt.Sprintf("%s/%s", c.Endpoint, "invoice")
+	logrus.Infof("requesting get invoice -> %s", endpoint)
+	req, err := http.NewRequest("POST", endpoint, bytes.NewReader(b))
 	if err != nil {
 		return err
 	}
@@ -35,5 +39,40 @@ func (c *HTTPClient) AggregateInvoice(data types.Distance) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("The service responded with a non 200 status code: %d\n", resp.StatusCode)
 	}
+	defer resp.Body.Close()
+
 	return nil
+}
+
+func (c *HTTPClient) GetInvoice(ctx context.Context, id int) (*types.Invoice, error) {
+
+	invReq := types.GetInvoiceRequest{
+		ObuID: int32(id),
+	}
+
+	b, err := json.Marshal(&invReq)
+	if err != nil {
+		return nil, err
+	}
+
+	endpoint := fmt.Sprintf("%s/%s?obu=%d", c.Endpoint, "invoice", id)
+	logrus.Infof("requesting get invoice -> %s", endpoint)
+	req, err := http.NewRequest("GET", endpoint, bytes.NewReader(b))
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("The service responded with a non 200 status code: %d\n", resp.StatusCode)
+	}
+
+	var invoice *types.Invoice
+	if err := json.NewDecoder(resp.Body).Decode(&invoice); err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return invoice, nil
 }

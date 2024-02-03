@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	//"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -9,36 +9,38 @@ import (
 	"net"
 	"net/http"
 	"strconv"
-	"time"
 
-	"github.com/DenisBytes/GoToll/aggregator/client"
+	//"github.com/DenisBytes/GoToll/aggregator/client"
 	"github.com/DenisBytes/GoToll/types"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 )
 
 func main() {
-	httpListenAddr := flag.String("httpAddr", ":3000", "the listen address of the HTTP server")
-	grpcListenAddr := flag.String("grpcAddr", ":3001", "the listen address of the GRPC server")
+	httpListenAddr := flag.String("httpAddr", ":4000", "the listen address of the HTTP server")
+	grpcListenAddr := flag.String("grpcAddr", ":4001", "the listen address of the GRPC server")
 	flag.Parse()
 
 	var (
 		store = NewMemoryStore()
 		svc   = NewInvoiceAggregator(store)
 	)
+	svc = NewMetricsMiddleware(svc)
 	svc = NewLogMiddleware(svc)
-	go makeGRPCTransport(*grpcListenAddr, svc)
-	time.Sleep(time.Second)
-	c, err := client.NewGRPCClient(*grpcListenAddr)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if _, err := c.Aggregate(context.TODO(), &types.AggregateRequest{
-		ObuID: 1,
-		Value: 55.55,
-		Unix:  time.Now().Unix(),
-	}); err != nil {
-		log.Fatal(err)
-	}
+	go func() {
+		log.Fatal(makeGRPCTransport(*grpcListenAddr, svc))
+	}()
+	// c, err := client.NewGRPCClient(*grpcListenAddr)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// if err := c.Aggregate(context.TODO(), &types.AggregateRequest{
+	// 	ObuID: 1,
+	// 	Value: 55.55,
+	// 	Unix:  time.Now().Unix(),
+	// }); err != nil {
+	// 	log.Fatal(err)
+	// }
 	makeHTTPTransport(*httpListenAddr, svc)
 }
 
@@ -61,12 +63,17 @@ func makeHTTPTransport(listenAddr string, svc Aggregator) {
 	fmt.Println("HTTP transport running on port: ", listenAddr)
 	http.HandleFunc("/aggregate", handleAggregate(svc))
 	http.HandleFunc("/invoice", HandleGetInvoice(svc))
+	http.Handle("/metrics", promhttp.Handler())
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
 
 }
 
 func handleAggregate(svc Aggregator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Method not supported"})
+			return
+		}
 		var distance types.Distance
 		if err := json.NewDecoder(r.Body).Decode(&distance); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
