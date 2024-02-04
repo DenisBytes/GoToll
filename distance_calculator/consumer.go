@@ -59,12 +59,16 @@ func (c *KafkaConsumer) readMessageLoop() {
 		distance, err := c.calcService.CalculateDistance(data)
 		if err != nil {
 			logrus.Errorf("calculation service error %s \n", err)
+			logrus.WithFields(logrus.Fields{
+				"err":       err,
+				"requestID": data.RequestID,
+			})
 			continue
 		}
 		req := &types.AggregateRequest{
 			Value: distance,
 			Unix:  time.Now().Unix(),
-			ObuID: int32 (data.OBUID),
+			ObuID: int32(data.OBUID),
 		}
 		if err := c.aggClient.Aggregate(context.Background(), req); err != nil {
 			logrus.Error("Aggregate error:", err)

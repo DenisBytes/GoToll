@@ -11,7 +11,7 @@ const (
 )
 
 type Aggregator interface {
-	AggregatorDistance(types.Distance) error
+	AggregateDistance(types.Distance) error
 	CalculateInvoice(int) (*types.Invoice, error)
 }
 
@@ -30,7 +30,7 @@ func NewInvoiceAggregator (store Storer) Aggregator{
 	}
 }
 
-func(i *InvoiceAggregator) AggregatorDistance(data types.Distance) error {
+func(i *InvoiceAggregator) AggregateDistance(data types.Distance) error {
 	fmt.Println("Processing and inserting distance in the storage:", data)
 	return i.store.Insert(data)
 }

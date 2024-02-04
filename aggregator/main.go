@@ -1,16 +1,13 @@
 package main
 
 import (
-	//"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"os"
-	"strconv"
 
-	//"github.com/DenisBytes/GoToll/aggregator/client"
 	"github.com/DenisBytes/GoToll/types"
 	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -51,62 +48,18 @@ func makeGRPCTransport(listenAddr string, svc Aggregator) error {
 }
 
 func makeHTTPTransport(listenAddr string, svc Aggregator) {
-	fmt.Println("HTTP transport running on port: ", listenAddr)
-	http.HandleFunc("/aggregate", handleAggregate(svc))
-	http.HandleFunc("/invoice", HandleGetInvoice(svc))
+
+	var (
+		aggMetricHandler = NewHTTPMetricHandler("aggregate")
+		invMetricHandler = NewHTTPMetricHandler("invoice")
+		aggregateHandler = makeHTTPHandlerFunc(aggMetricHandler.instrument(handleAggregate(svc)))
+		invoiceHandler   = makeHTTPHandlerFunc(invMetricHandler.instrument(handleGetInvoice(svc)))
+	)
+	http.HandleFunc("/aggregate", aggregateHandler)
+	http.HandleFunc("/invoice", invoiceHandler)
 	http.Handle("/metrics", promhttp.Handler())
+	fmt.Println("HTTP transport running on port: ", listenAddr)
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
-
-}
-
-func handleAggregate(svc Aggregator) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Method not supported"})
-			return
-		}
-		var distance types.Distance
-		if err := json.NewDecoder(r.Body).Decode(&distance); err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-			return
-		}
-		if err := svc.AggregatorDistance(distance); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-			return
-		}
-	}
-}
-
-func writeJSON(w http.ResponseWriter, status int, v any) error {
-	w.WriteHeader(status)
-	w.Header().Add("Content-Type", "application/json")
-	return json.NewEncoder(w).Encode(v)
-}
-
-func HandleGetInvoice(svc Aggregator) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Method not supported"})
-			return
-		}
-		values, ok := r.URL.Query()["obu"]
-		if !ok {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing OBU id"})
-			return
-		}
-		obuID, err := strconv.Atoi(values[0])
-		if err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid OBU id"})
-			return
-		}
-		invoice, err := svc.CalculateInvoice(obuID)
-		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-			return
-		}
-
-		writeJSON(w, http.StatusOK, invoice)
-	}
 }
 
 func makeStore() Storer {
@@ -118,5 +71,10 @@ func makeStore() Storer {
 		log.Fatalf("invalid store type given %s", storeType)
 		return nil
 	}
+}
 
+func writeJSON(w http.ResponseWriter, status int, v any) error {
+	w.WriteHeader(status)
+	w.Header().Add("Content-Type", "application/json")
+	return json.NewEncoder(w).Encode(v)
 }

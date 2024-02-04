@@ -23,5 +23,5 @@ func (s *GRPCAggregatorServer) Aggregate(ctx context.Context, req *types.Aggrega
 		Value: req.Value,
 		Unix:  req.Unix,
 	}
-	return &types.None{}, s.svc.AggregatorDistance(distance)
+	return &types.None{}, s.svc.AggregateDistance(distance)
 }

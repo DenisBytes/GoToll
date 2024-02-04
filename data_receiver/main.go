@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"math"
+	"math/rand"
 	"net/http"
 
 	"github.com/DenisBytes/GoToll/types"
@@ -14,15 +16,15 @@ type DataReceiver struct {
 	prod DataProducer
 }
 
-func NewDataReceiver() (*DataReceiver, error){
+func NewDataReceiver() (*DataReceiver, error) {
 	var (
-		p DataProducer
-		err error
+		p          DataProducer
+		err        error
 		kafkaTopic = "obudata"
 	)
 	p, err = NewKafkaProducer(kafkaTopic)
 	if err != nil {
-		return nil, err 
+		return nil, err
 	}
 
 	p = NewLogMiddleware(p)
@@ -34,10 +36,10 @@ func NewDataReceiver() (*DataReceiver, error){
 func (dr *DataReceiver) handleWS(w http.ResponseWriter, r *http.Request) {
 
 	ws := websocket.Upgrader{
-		ReadBufferSize: 1028,
+		ReadBufferSize:  1028,
 		WriteBufferSize: 1028,
 	}
-	conn, err := ws.Upgrade(w,r,nil)
+	conn, err := ws.Upgrade(w, r, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -51,9 +53,10 @@ func (dr *DataReceiver) wsReceiveLoop() {
 	for {
 		var data types.OBUData
 		if err := dr.conn.ReadJSON(&data); err != nil {
-			log.Println("read error: ", err) 
+			log.Println("read error: ", err)
 			continue
-		} 
+		}
+		data.RequestID = rand.Intn(math.MaxInt)
 		if err := dr.produceData(data); err != nil {
 			fmt.Println("kafka reproduce error: ", err)
 		}
@@ -61,7 +64,7 @@ func (dr *DataReceiver) wsReceiveLoop() {
 	}
 }
 
-func (dr *DataReceiver) produceData(data types.OBUData) error{
+func (dr *DataReceiver) produceData(data types.OBUData) error {
 	return dr.prod.ProduceData(data)
 }
 

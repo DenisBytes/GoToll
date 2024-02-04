@@ -64,7 +64,7 @@ func NewMetricsMiddleware(next Aggregator) *MetricsMiddleware {
 	}
 }
 
-func (m *MetricsMiddleware) AggregatorDistance(data types.Distance) (err error) {
+func (m *MetricsMiddleware) AggregateDistance(data types.Distance) (err error) {
 
 	defer func(start time.Time) {
 		m.reqLatencyAgg.Observe(float64(time.Since(start).Seconds()))
@@ -74,7 +74,7 @@ func (m *MetricsMiddleware) AggregatorDistance(data types.Distance) (err error) 
 		}
 	}(time.Now())
 
-	err = m.next.AggregatorDistance(data)
+	err = m.next.AggregateDistance(data)
 	return
 }
 
@@ -102,14 +102,14 @@ func NewLogMiddleware(next Aggregator) Aggregator {
 	}
 }
 
-func (l *LogMiddleWare) AggregatorDistance(data types.Distance) (err error) {
+func (l *LogMiddleWare) AggregateDistance(data types.Distance) (err error) {
 	defer func(start time.Time) {
 		logrus.WithFields(logrus.Fields{
 			"took": time.Since(start),
 			"err":  err,
 		}).Info("Aggregate distance")
 	}(time.Now())
-	err = l.next.AggregatorDistance(data)
+	err = l.next.AggregateDistance(data)
 	return
 }
 

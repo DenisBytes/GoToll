@@ -4,6 +4,7 @@ type OBUData struct {
 	OBUID int     `json:"obuID"`
 	Lat   float64 `json:"lat"`
 	Long  float64 `json:"long"`
+	RequestID int `json:"requestID"`
 }
 
 type Distance struct {
@@ -13,7 +14,7 @@ type Distance struct {
 }
 
 type Invoice struct {
-	OBUID int `json:"obuID"`
+	OBUID         int     `json:"obuID"`
 	TotalDistance float64 `json:"totalDistance"`
-	TotalAmount float64 `json:"totalAmount"`
+	TotalAmount   float64 `json:"totalAmount"`
 }
