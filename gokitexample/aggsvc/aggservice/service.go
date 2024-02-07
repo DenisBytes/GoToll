@@ -2,10 +2,11 @@ package aggservice
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/DenisBytes/GoToll/types"
+	"github.com/go-kit/log"
 )
+
 const basePrice = 3.15
 
 type Service interface {
@@ -29,7 +30,6 @@ func NewBasicService(store Storer) Service {
 }
 
 func (svc *BasicService) Aggregate(_ context.Context, dist types.Distance) error {
-	fmt.Println("WOWOWOOWOWOWOWOWOWOWOOW")
 	return svc.store.Insert(dist)
 }
 
@@ -47,11 +47,11 @@ func (svc *BasicService) Calculate(_ context.Context, obuID int) (*types.Invoice
 }
 
 // New will construct a complete microservice
-func New() Service {
+func New(logger log.Logger) Service {
 	var svc Service
 	{
 		svc = NewBasicService(NewMemoryStore())
-		svc = NewLoggingMiddleware()(svc)
+		svc = NewLoggingMiddleware(logger)(svc)
 		svc = NewInstrumentationMiddleware()(svc)
 	}
 	return svc
