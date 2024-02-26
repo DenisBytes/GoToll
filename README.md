@@ -1,6 +1,6 @@
 # GoToll
 
-Microservices to calculate toll cost basend on kms made by trucks / OBU.
+Microservices to calculate toll cost based on kms made by trucks / OBU.
 
 ![image](https://github.com/DenisBytes/GoToll/assets/130691305/7a962108-4a5b-4657-8a0e-bf928af75e33)
 
